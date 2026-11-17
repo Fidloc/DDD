@@ -1,6 +1,12 @@
 namespace Reservations.Domain;
 
-public sealed class ZoneSchedule
+public sealed record ZoneScheduleState(
+    ZoneId ZoneId,
+    ZoneProfile Zone,
+    BookingPolicy Policy,
+    IReadOnlyList<ReservationState> Reservations);
+
+public sealed class ZoneSchedule : IEquatable<ZoneSchedule>
 {
     private readonly List<Reservation> reservations = [];
     private readonly List<DomainEvent> events = [];
@@ -14,10 +20,53 @@ public sealed class ZoneSchedule
 
     public ZoneSchedule(ZoneId zoneId, ZoneProfile zone, BookingPolicy policy)
     {
+        ZoneId = zoneId ?? throw new DomainException("Ідентифікатор зони є обов'язковим.");
+        Zone = zone ?? throw new DomainException("Профіль зони є обов'язковим.");
+        Policy = policy ?? throw new DomainException("Політика бронювання є обов'язковою.");
+    }
+
+    private ZoneSchedule(ZoneId zoneId, ZoneProfile zone, BookingPolicy policy, IEnumerable<Reservation> restoredReservations)
+    {
         ZoneId = zoneId;
         Zone = zone;
         Policy = policy;
+        reservations.AddRange(restoredReservations);
     }
+
+    public static ZoneSchedule Restore(ZoneScheduleState state)
+    {
+        if (state is null)
+            throw new DomainException("Стан розкладу зони не може бути порожнім.");
+        if (state.ZoneId is null || state.Zone is null || state.Policy is null || state.Reservations is null)
+            throw new DomainException("Усі складові стану розкладу зони є обов'язковими.");
+
+        var restored = new List<Reservation>(state.Reservations.Count);
+        var ids = new HashSet<ReservationId>();
+
+        foreach (var item in state.Reservations)
+        {
+            var reservation = Reservation.Restore(item);
+            if (!ids.Add(reservation.Id))
+                throw new DomainException("У розкладі зони виявлено дублювання ідентифікатора резервування.");
+
+            if (reservation.BlocksZone)
+            {
+                if (!state.Zone.Allows(reservation.Purpose))
+                    throw new DomainException("Активне резервування не відповідає допустимому призначенню зони.");
+                if (reservation.Participants > state.Zone.Capacity)
+                    throw new DomainException("Активне резервування перевищує місткість зони.");
+                if (restored.Any(existing => existing.BlocksZone && existing.Slot.Overlaps(reservation.Slot)))
+                    throw new DomainException("У збереженому розкладі виявлено перетин активних резервувань.");
+            }
+
+            restored.Add(reservation);
+        }
+
+        return new ZoneSchedule(state.ZoneId, state.Zone, state.Policy, restored);
+    }
+
+    public ZoneScheduleState ToState() =>
+        new(ZoneId, Zone, Policy, reservations.Select(r => r.ToState()).ToArray());
 
     public Reservation Get(ReservationId id) =>
         reservations.FirstOrDefault(r => r.Id == id)
@@ -152,4 +201,8 @@ public sealed class ZoneSchedule
             throw new DomainException(
                 $"Очікувався стан {expected}, а резервування перебуває у стані {reservation.Status}.");
     }
+
+    public bool Equals(ZoneSchedule? other) => other is not null && ZoneId == other.ZoneId;
+    public override bool Equals(object? obj) => Equals(obj as ZoneSchedule);
+    public override int GetHashCode() => ZoneId.GetHashCode();
 }

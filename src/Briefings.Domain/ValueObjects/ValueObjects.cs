@@ -1,7 +1,16 @@
 namespace Briefings.Domain;
 
-public sealed record PersonId(Guid Value)
+public sealed record PersonId
 {
+    public Guid Value { get; }
+
+    public PersonId(Guid value)
+    {
+        if (value == Guid.Empty)
+            throw new DomainException("Ідентифікатор особи не може бути порожнім.");
+        Value = value;
+    }
+
     public static PersonId New() => new(Guid.NewGuid());
 }
 

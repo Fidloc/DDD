@@ -9,7 +9,18 @@ public enum UsageStatus
     Cancelled    
 }
 
-public sealed class ZoneUsageRecord
+public sealed record ZoneUsageState(
+    ReservationId ReservationId,
+    ZoneId ZoneId,
+    UserId Organizer,
+    TimeSlot Slot,
+    UsagePolicy Policy,
+    UsageStatus Status,
+    DateTimeOffset? StartedAt,
+    DateTimeOffset? CompletedAt,
+    bool DelayWasReported);
+
+public sealed class ZoneUsageRecord : IEquatable<ZoneUsageRecord>
 {
     private readonly List<DomainEvent> events = [];
 
@@ -37,7 +48,67 @@ public sealed class ZoneUsageRecord
         Status = UsageStatus.Expected;
     }
 
+    private ZoneUsageRecord(ZoneUsageState state)
+    {
+        ReservationId = state.ReservationId;
+        ZoneId = state.ZoneId;
+        Organizer = state.Organizer;
+        Slot = state.Slot;
+        Policy = state.Policy;
+        Status = state.Status;
+        StartedAt = state.StartedAt;
+        CompletedAt = state.CompletedAt;
+        DelayWasReported = state.DelayWasReported;
+    }
+
     public static ZoneUsageRecord ExpectFrom(ConfirmedSlot fact, UsagePolicy policy) => new(fact, policy);
+
+    public static ZoneUsageRecord Restore(ZoneUsageState state)
+    {
+        if (state is null)
+            throw new DomainException("Стан запису використання зони не може бути порожнім.");
+        if (state.ReservationId is null || state.ZoneId is null || state.Organizer is null ||
+            state.Slot is null || state.Policy is null)
+            throw new DomainException("Усі ідентифікатори, інтервал та політика є обов'язковими для відновлення.");
+
+        switch (state.Status)
+        {
+            case UsageStatus.Expected:
+            case UsageStatus.Cancelled:
+                if (state.StartedAt is not null || state.CompletedAt is not null)
+                    throw new DomainException($"У стані {state.Status} не може бути зафіксованого часу початку чи завершення.");
+                break;
+
+            case UsageStatus.NoShow:
+                if (state.StartedAt is not null || state.CompletedAt is not null)
+                    throw new DomainException("У стані NoShow не може бути зафіксованого часу використання.");
+                if (state.DelayWasReported)
+                    throw new DomainException("Неузгоджений стан: неявка не може бути зафіксована за наявності повідомлення про затримку.");
+                break;
+
+            case UsageStatus.InProgress:
+                if (state.StartedAt is not { } started || !state.Slot.Contains(started))
+                    throw new DomainException("У стані InProgress має бути зафіксований початок у межах слоту.");
+                if (state.CompletedAt is not null)
+                    throw new DomainException("У стані InProgress не може бути зафіксованого часу завершення.");
+                break;
+
+            case UsageStatus.Completed:
+                if (state.StartedAt is not { } startedAt || !state.Slot.Contains(startedAt))
+                    throw new DomainException("У стані Completed має бути коректний час початку.");
+                if (state.CompletedAt is not { } completedAt || completedAt < startedAt)
+                    throw new DomainException("У стані Completed час завершення має бути не раніше за час початку.");
+                break;
+
+            default:
+                throw new DomainException($"Невідомий статус використання зони: {state.Status}.");
+        }
+
+        return new ZoneUsageRecord(state);
+    }
+
+    public ZoneUsageState ToState() =>
+        new(ReservationId, ZoneId, Organizer, Slot, Policy, Status, StartedAt, CompletedAt, DelayWasReported);
 
     public void Start(Actor actor, DateTimeOffset at)
     {
@@ -109,4 +180,8 @@ public sealed class ZoneUsageRecord
         if (Status != expected)
             throw new DomainException($"Очікувався стан {expected}, а використання перебуває у стані {Status}.");
     }
+
+    public bool Equals(ZoneUsageRecord? other) => other is not null && ReservationId == other.ReservationId;
+    public override bool Equals(object? obj) => Equals(obj as ZoneUsageRecord);
+    public override int GetHashCode() => ReservationId.GetHashCode();
 }

@@ -11,6 +11,15 @@ public enum ReservationStatus
     NoShow      
 }
 
+public sealed record ReservationState(
+    ReservationId Id,
+    UserId Organizer,
+    TimeSlot Slot,
+    ReservationPurpose Purpose,
+    int Participants,
+    ReservationStatus Status,
+    Rejection? Rejection);
+
 public sealed class Reservation : IEquatable<Reservation>
 {
     public ReservationId Id { get; }
@@ -33,6 +42,36 @@ public sealed class Reservation : IEquatable<Reservation>
         Participants = participants;
         Status = ReservationStatus.Requested;
     }
+
+    private Reservation(ReservationState state)
+    {
+        Id = state.Id;
+        Organizer = state.Organizer;
+        Slot = state.Slot;
+        Purpose = state.Purpose;
+        Participants = state.Participants;
+        Status = state.Status;
+        Rejection = state.Rejection;
+    }
+
+    internal static Reservation Restore(ReservationState state)
+    {
+        if (state is null)
+            throw new DomainException("Стан резервування не може бути порожнім.");
+        if (state.Id is null || state.Organizer is null || state.Slot is null)
+            throw new DomainException("Ідентифікатор, організатор та часовий слот є обов'язковими.");
+        if (state.Participants < 1)
+            throw new DomainException("Кількість учасників має бути не меншою за 1.");
+        if (state.Status == ReservationStatus.Rejected && state.Rejection is null)
+            throw new DomainException("Відхилене резервування повинно містити причину відхилення.");
+        if (state.Status != ReservationStatus.Rejected && state.Rejection is not null)
+            throw new DomainException("Причина відхилення допустима лише для статусу Rejected.");
+
+        return new Reservation(state);
+    }
+
+    public ReservationState ToState() =>
+        new(Id, Organizer, Slot, Purpose, Participants, Status, Rejection);
 
     public bool BlocksZone => Status is ReservationStatus.Confirmed or ReservationStatus.InUse;
 

@@ -1,17 +1,44 @@
 namespace ZoneUsage.Domain;
 
-public sealed record ReservationId(Guid Value)
+public sealed record ReservationId
 {
+    public Guid Value { get; }
+
+    public ReservationId(Guid value)
+    {
+        if (value == Guid.Empty)
+            throw new DomainException("Ідентифікатор резервування не може бути порожнім.");
+        Value = value;
+    }
+
     public static ReservationId New() => new(Guid.NewGuid());
 }
 
-public sealed record ZoneId(Guid Value)
+public sealed record ZoneId
 {
+    public Guid Value { get; }
+
+    public ZoneId(Guid value)
+    {
+        if (value == Guid.Empty)
+            throw new DomainException("Ідентифікатор зони не може бути порожнім.");
+        Value = value;
+    }
+
     public static ZoneId New() => new(Guid.NewGuid());
 }
 
-public sealed record UserId(Guid Value)
+public sealed record UserId
 {
+    public Guid Value { get; }
+
+    public UserId(Guid value)
+    {
+        if (value == Guid.Empty)
+            throw new DomainException("Ідентифікатор користувача не може бути порожнім.");
+        Value = value;
+    }
+
     public static UserId New() => new(Guid.NewGuid());
 }
 
