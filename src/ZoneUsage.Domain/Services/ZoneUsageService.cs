@@ -2,10 +2,6 @@ using ZoneUsage.Domain;
 
 namespace ZoneUsage.Application;
 
-/// <summary>
-/// Прикладна служба контексту «Фактичне використання зон».
-/// Координує завантаження запису використання, передачу предметної дії та фіксацію стану.
-/// </summary>
 public sealed class ZoneUsageService
 {
     private readonly IZoneUsageRepository repository;
