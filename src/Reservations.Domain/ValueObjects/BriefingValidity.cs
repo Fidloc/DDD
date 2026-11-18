@@ -1,9 +1,7 @@
 namespace Reservations.Domain;
 
-/// <summary>
-/// Зовнішній факт із контексту «Облік інструктажів організаторів»:
-/// строк чинності інструктажу особи. Погодження лише читає цей факт і не змінює його.
-/// </summary>
+//Зовнішній факт із контексту «Облік інструктажів організаторів»
+
 public sealed record BriefingValidity
 {
     public UserId Person { get; }
@@ -19,7 +17,7 @@ public sealed record BriefingValidity
         ValidUntil = validUntil;
     }
 
-    /// <summary>Інструктаж цієї особи чинний на весь запитаний період.</summary>
+    //Інструктаж цієї особи чинний на весь запитаний період
     public bool CoversWholeSlot(UserId organizer, TimeSlot slot) =>
         Person == organizer && ValidFrom <= slot.Start && slot.End <= ValidUntil;
 }
