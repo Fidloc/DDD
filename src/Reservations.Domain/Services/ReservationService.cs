@@ -2,11 +2,8 @@ using Reservations.Domain;
 
 namespace Reservations.Application;
 
-/// <summary>
-/// Прикладна служба контексту «Погодження резервування».
-/// Отримує довірені зовнішні факти (актор, час, чинність інструктажу),
-/// завантажує розклад зони, делегує рішення агрегату та фіксує результат.
-/// </summary>
+//Отримує довірені зовнішні факти, завантажує розклад зони, делегує рішення агрегату та фіксує результат
+
 public sealed class ReservationService
 {
     private readonly IZoneScheduleRepository repository;
