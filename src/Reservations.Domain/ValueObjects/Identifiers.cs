@@ -1,6 +1,6 @@
 namespace Reservations.Domain;
 
-/// <summary>Ідентифікатор зони коворкінгу (переговорна, диспетчерська кімната, робоче місце, лабораторія).</summary>
+//Ідентифікатор зони коворкінгу переговорна, диспетчерська кімната, робоче місце, лабораторія
 public sealed record ZoneId
 {
     public Guid Value { get; }
@@ -15,7 +15,7 @@ public sealed record ZoneId
     public static ZoneId New() => new(Guid.NewGuid());
 }
 
-/// <summary>Ідентифікатор резервування. Заявка й резервування — той самий об'єкт з неперервною історією.</summary>
+//Ідентифікатор резервування. Заявка й резервування — той самий об'єкт з неперервною історією
 public sealed record ReservationId
 {
     public Guid Value { get; }
@@ -30,7 +30,7 @@ public sealed record ReservationId
     public static ReservationId New() => new(Guid.NewGuid());
 }
 
-/// <summary>Ідентифікатор користувача, отриманий із контексту «Ідентифікація та доступ».</summary>
+//Ідентифікатор користувача, отриманий із контексту «Ідентифікація та доступ»
 public sealed record UserId
 {
     public Guid Value { get; }
