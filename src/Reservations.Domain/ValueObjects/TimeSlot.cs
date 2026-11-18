@@ -1,10 +1,6 @@
 namespace Reservations.Domain;
 
-/// <summary>
-/// Часовий інтервал [Start; End). Кінець не входить до інтервалу,
-/// тому бронювання впритул (12:00–13:00 і 13:00–14:00) не перетинаються.
-/// Незмінний: властивості доступні лише для читання, вираз with не може їх змінити.
-/// </summary>
+// Часовий інтервал
 public sealed record TimeSlot
 {
     public DateTimeOffset Start { get; }
