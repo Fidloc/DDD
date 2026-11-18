@@ -1,9 +1,7 @@
 namespace Reservations.Domain;
 
-/// <summary>
-/// Обмеження резервування (гаряча точка Г3). Значення за замовчуванням — модельне припущення
-/// за практикою систем бронювання: від 30 хвилин до 8 годин, не далі ніж на 30 днів наперед.
-/// </summary>
+//Обмеження резервування
+
 public sealed record BookingPolicy
 {
     public TimeSpan MinDuration { get; }
@@ -26,7 +24,7 @@ public sealed record BookingPolicy
         Horizon = horizon;
     }
 
-    /// <summary>Перевіряє, чи заявку на цей інтервал взагалі можна прийняти до розгляду.</summary>
+    //Перевіряє, чи заявку на цей інтервал взагалі можна прийняти до розгляду
     public void EnsureAllows(TimeSlot slot, DateTimeOffset now)
     {
         if (slot.Start < now)
