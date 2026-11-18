@@ -1,6 +1,6 @@
 namespace Reservations.Domain;
 
-/// <summary>Роль, підтверджена контекстом «Ідентифікація та доступ».</summary>
+//Роль, підтверджена контекстом «Ідентифікація та доступ»
 public enum ReservationRole
 {
     Organizer,           // організатор
@@ -8,5 +8,5 @@ public enum ReservationRole
     SpaceAdministrator   // адміністратор простору
 }
 
-/// <summary>Хто виконує команду: користувач і його роль.</summary>
+//Хто виконує команду: користувач і його роль.
 public sealed record Actor(UserId UserId, ReservationRole Role);
