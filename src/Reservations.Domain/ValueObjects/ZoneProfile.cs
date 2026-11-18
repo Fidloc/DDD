@@ -16,11 +16,7 @@ public enum ReservationPurpose
     LaboratoryWork    // лабораторні роботи
 }
 
-/// <summary>
-/// Опис зони, потрібний для рішення про погодження: категорія й місткість.
-/// Допустимі цілі та потреба в інструктажі випливають з категорії
-/// (перелік умов для інших категорій — відкрите питання Г2).
-/// </summary>
+// Опис зони
 public sealed record ZoneProfile
 {
     public ZoneCategory Category { get; }
@@ -34,7 +30,7 @@ public sealed record ZoneProfile
         Capacity = capacity;
     }
 
-    /// <summary>Умова використання: для лабораторії потрібен чинний інструктаж організатора.</summary>
+    //Умова використання лабораторіями
     public bool RequiresBriefing => Category == ZoneCategory.Laboratory;
 
     public bool Allows(ReservationPurpose purpose) => Category switch
