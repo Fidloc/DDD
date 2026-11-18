@@ -8,5 +8,5 @@ public enum ReservationRole
     SpaceAdministrator   // адміністратор простору
 }
 
-//Хто виконує команду: користувач і його роль.
+//Хто виконує команду користувач і його роль.
 public sealed record Actor(UserId UserId, ReservationRole Role);
