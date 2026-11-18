@@ -9,7 +9,7 @@ public enum RejectionCode
     ManagerDecision    // інша причина, яку вказав розпорядник
 }
 
-/// <summary>Зафіксована причина відхилення заявки.</summary>
+//Зафіксована причина відхилення заявки
 public sealed record Rejection
 {
     public RejectionCode Code { get; }
