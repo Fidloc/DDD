@@ -3,10 +3,7 @@ using Reservations.Domain;
 
 namespace Reservations.Infrastructure;
 
-/// <summary>
-/// Навчальний адаптер сховища та одиниці роботи в оперативній пам'яті для контексту «Погодження резервування».
-/// Обмеження: дані зберігаються лише в оперативній пам'яті процесу без міжпроцесної довговічності.
-/// </summary>
+//Навчальний адаптер сховища та одиниці роботи в оперативній пам'яті для контексту «Погодження резервування»
 public sealed class ReservationMemorySession : IZoneScheduleRepository, IUnitOfWork
 {
     private readonly Dictionary<ZoneId, (ZoneScheduleState State, long Revision)> rows = [];
