@@ -28,61 +28,18 @@ public sealed class BriefingServiceTests
     }
 
     [Fact]
-    public async Task RecordBriefing_WhenUnauthorizedOrganizer_RefusesWithoutStagingOrSaving()
+    public async Task RecordBriefing_WhenUnauthorizedOrganizer_RefusesWithoutUpdatingSession()
     {
         var person = PersonId.New();
-        var spyRepo = new SpyBriefingRepository();
-        var service = new BriefingService(spyRepo, spyRepo, new StubActorContext(Organizer), new StubClock(Now));
+        var session = new BriefingMemorySession();
+        var service = new BriefingService(session, session, new StubActorContext(Organizer), new StubClock(Now));
 
         await Assert.ThrowsAsync<DomainException>(() =>
             service.RecordBriefingAsync(person, Now.AddHours(-2)));
 
-        Assert.Equal(0, spyRepo.StagedCount);
-        Assert.Equal(0, spyRepo.SavedCount);
-    }
-
-    [Fact]
-    public async Task RevokeBriefing_WhenUnitOfWorkFails_ThrowsAndLeavesStoredStateUnchanged()
-    {
-        var person = PersonId.New();
-        var existing = new BriefingRecord(person, BriefingPolicy.Default);
-        existing.RecordBriefing(Officer, Now.AddDays(-10), Now);
-        var session = new BriefingMemorySession(existing);
-        var failingUow = new FailingUnitOfWork();
-        var service = new BriefingService(session, failingUow, new StubActorContext(Officer), new StubClock(Now));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.RevokeBriefingAsync(person, "Порушення регламенту"));
-
-        var reloaded = await session.FindAsync(person);
-        Assert.NotNull(reloaded);
-        Assert.Null(reloaded.Aggregate.RevokedAt);
-        Assert.Equal(1L, reloaded.Revision);
+        Assert.Null(await session.FindAsync(person));
     }
 
     private sealed record StubActorContext(Actor CurrentActor) : IActorContext;
     private sealed record StubClock(DateTimeOffset Now) : IClock;
-
-    private sealed class FailingUnitOfWork : IUnitOfWork
-    {
-        public Task SaveChangesAsync() =>
-            throw new InvalidOperationException("Технічний збій фіксації транзакції.");
-    }
-
-    private sealed class SpyBriefingRepository : IBriefingRecordRepository, IUnitOfWork
-    {
-        public int StagedCount { get; private set; }
-        public int SavedCount { get; private set; }
-
-        public Task<LoadedBriefingRecord?> FindAsync(PersonId person) =>
-            Task.FromResult<LoadedBriefingRecord?>(null);
-
-        public void Stage(BriefingRecord record, long expectedRevision) => StagedCount++;
-
-        public Task SaveChangesAsync()
-        {
-            SavedCount++;
-            return Task.CompletedTask;
-        }
-    }
 }

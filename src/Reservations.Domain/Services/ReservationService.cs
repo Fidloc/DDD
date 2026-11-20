@@ -45,4 +45,23 @@ public sealed class ReservationService
         repository.Stage(schedule, loaded.Revision);
         await unitOfWork.SaveChangesAsync();
     }
+
+    public async Task ExecuteIntegrationAsync<TMessage>(
+        string json,
+        Func<string, DateTimeOffset, TMessage> parser,
+        Func<TMessage, BriefingValidity> mapper,
+        Func<TMessage, ZoneId> zoneId,
+        Func<TMessage, ReservationId> reservationId)
+    {
+        var now = clock.Now;
+        var message = parser(json, now);
+        var loaded = await repository.FindAsync(zoneId(message))
+            ?? throw new DomainException("Розклад вказаної зони не знайдено у сховищі.");
+
+        var briefing = mapper(message);
+        loaded.Aggregate.Confirm(reservationId(message), actorContext.CurrentActor, briefing, now);
+
+        repository.Stage(loaded.Aggregate, loaded.Revision);
+        await unitOfWork.SaveChangesAsync();
+    }
 }

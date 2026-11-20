@@ -3,10 +3,7 @@ using Briefings.Domain;
 
 namespace Briefings.Infrastructure;
 
-/// <summary>
-/// Навчальний адаптер сховища та одиниці роботи в оперативній пам'яті для контексту «Облік інструктажів».
-/// Обмеження: дані існують лише в межах поточного процесу та не зберігаються між запусками застосунку.
-/// </summary>
+
 public sealed class BriefingMemorySession : IBriefingRecordRepository, IUnitOfWork
 {
     private readonly Dictionary<PersonId, (BriefingRecordState State, long Revision)> rows = [];

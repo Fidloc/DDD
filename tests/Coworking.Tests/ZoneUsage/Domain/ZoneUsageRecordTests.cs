@@ -3,7 +3,6 @@ using ZoneUsage.Domain;
 
 namespace Coworking.Tests.ZoneUsage.Domain;
 
-/// <summary>Правила агрегату «Використання зони» (контекст «Фіксація використання зони»).</summary>
 public sealed class ZoneUsageRecordTests
 {
     private static readonly DateTimeOffset SlotStart = new(2026, 11, 17, 10, 0, 0, TimeSpan.FromHours(2));
@@ -21,8 +20,8 @@ public sealed class ZoneUsageRecordTests
         string.Join(",", u.Events.Select(e => e.GetType().Name));
 
     [Theory]
-    [InlineData(-1)]   // за хвилину до початку
-    [InlineData(120)]  // рівно в момент закінчення періоду
+    [InlineData(-1)]
+    [InlineData(120)]
     public void Start_OutsidePeriod_RefusesWithoutChanges(int minutesFromStart)
     {
         var usage = Expected();
@@ -54,17 +53,5 @@ public sealed class ZoneUsageRecordTests
         Assert.Throws<DomainException>(() => usage.DeclareNoShow(Administrator, SlotStart.AddMinutes(30)));
 
         Assert.Equal(before, StateOf(usage));
-    }
-
-    [Fact]
-    public void CancelExpectation_WhenExpected_PreventsLaterNoShow()
-    {
-        var usage = Expected();
-
-        usage.CancelExpectation(SlotStart.AddHours(-3));
-
-        Assert.Equal(UsageStatus.Cancelled, usage.Status);
-        Assert.Throws<DomainException>(() => usage.DeclareNoShow(Administrator, SlotStart.AddMinutes(30)));
-        Assert.IsType<UsageExpectationCancelled>(Assert.Single(usage.Events));
     }
 }

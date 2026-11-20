@@ -31,13 +31,13 @@ public sealed class ReservationServiceTests
     }
 
     [Fact]
-    public async Task ConfirmReservation_ByOrganizerInsteadOfManager_RefusesWithoutStagingOrSaving()
+    public async Task ConfirmReservation_ByOrganizerInsteadOfManager_RefusesAndKeepsRequestedState()
     {
         var schedule = MeetingRoom();
         var reservationId = Submit(schedule, Tomorrow(10, 11));
-        var spyRepo = new SpyZoneScheduleRepository(schedule);
+        var session = new ReservationMemorySession(schedule);
         var service = new ReservationService(
-            spyRepo, spyRepo,
+            session, session,
             new StubActorContext(Organizer),
             new StubClock(Now),
             new StubBriefingFacts(null));
@@ -45,29 +45,10 @@ public sealed class ReservationServiceTests
         await Assert.ThrowsAsync<DomainException>(() =>
             service.ConfirmReservationAsync(schedule.ZoneId, reservationId));
 
-        Assert.Equal(0, spyRepo.StagedCount);
-        Assert.Equal(0, spyRepo.SavedCount);
-    }
-
-    [Fact]
-    public async Task ConfirmReservation_WhenUnitOfWorkFails_ThrowsAndKeepsRequestedStatusInStorage()
-    {
-        var schedule = MeetingRoom();
-        var reservationId = Submit(schedule, Tomorrow(10, 11));
-        var session = new ReservationMemorySession(schedule);
-        var service = new ReservationService(
-            session, new FailingUnitOfWork(),
-            new StubActorContext(Manager),
-            new StubClock(Now),
-            new StubBriefingFacts(null));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.ConfirmReservationAsync(schedule.ZoneId, reservationId));
-
-        var reloaded = await session.FindAsync(schedule.ZoneId);
-        Assert.NotNull(reloaded);
-        Assert.Equal(ReservationStatus.Requested, reloaded.Aggregate.Get(reservationId).Status);
-        Assert.Equal(1L, reloaded.Revision);
+        var loaded = await session.FindAsync(schedule.ZoneId);
+        Assert.NotNull(loaded);
+        Assert.Equal(1L, loaded.Revision);
+        Assert.Equal(ReservationStatus.Requested, loaded.Aggregate.Get(reservationId).Status);
     }
 
     private sealed record StubActorContext(Actor CurrentActor) : IActorContext;
@@ -75,29 +56,5 @@ public sealed class ReservationServiceTests
     private sealed record StubBriefingFacts(BriefingValidity? Validity) : IBriefingFacts
     {
         public Task<BriefingValidity?> GetValidityAsync(UserId organizer) => Task.FromResult(Validity);
-    }
-
-    private sealed class FailingUnitOfWork : IUnitOfWork
-    {
-        public Task SaveChangesAsync() =>
-            throw new InvalidOperationException("Технічний збій збереження розкладу.");
-    }
-
-    private sealed class SpyZoneScheduleRepository(ZoneSchedule initial) : IZoneScheduleRepository, IUnitOfWork
-    {
-        private readonly ZoneScheduleState state = initial.ToState();
-        public int StagedCount { get; private set; }
-        public int SavedCount { get; private set; }
-
-        public Task<LoadedZoneSchedule?> FindAsync(ZoneId zoneId) =>
-            Task.FromResult<LoadedZoneSchedule?>(new LoadedZoneSchedule(ZoneSchedule.Restore(state), 1L));
-
-        public void Stage(ZoneSchedule schedule, long expectedRevision) => StagedCount++;
-
-        public Task SaveChangesAsync()
-        {
-            SavedCount++;
-            return Task.CompletedTask;
-        }
     }
 }

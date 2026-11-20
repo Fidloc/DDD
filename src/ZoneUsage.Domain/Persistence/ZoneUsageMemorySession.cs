@@ -3,10 +3,7 @@ using ZoneUsage.Domain;
 
 namespace ZoneUsage.Infrastructure;
 
-/// <summary>
-/// Навчальний адаптер сховища та одиниці роботи в оперативній пам'яті для контексту «Фактичне використання зон».
-/// Обмеження: дані зберігаються лише в пам'яті процесу та втрачаються після завершення програми.
-/// </summary>
+
 public sealed class ZoneUsageMemorySession : IZoneUsageRepository, IUnitOfWork
 {
     private readonly Dictionary<ReservationId, (ZoneUsageState State, long Revision)> rows = [];

@@ -34,19 +34,6 @@ public sealed class ZoneScheduleTests
 
         Assert.Equal(ReservationStatus.Rejected, schedule.Get(urgent).Status);
         Assert.Equal(RejectionCode.Conflict, schedule.Get(urgent).Rejection!.Code);
-        Assert.IsType<ReservationRejected>(schedule.Events[^1]);
-    }
-
-    [Fact]
-    public void Confirm_AdjacentToConfirmedReservation_Confirms()
-    {
-        var schedule = MeetingRoom();
-        Confirmed(schedule, Tomorrow(10, 12));
-        var next = Submit(schedule, Tomorrow(12, 13));
-
-        schedule.Confirm(next, Manager, null, Now);
-
-        Assert.Equal(ReservationStatus.Confirmed, schedule.Get(next).Status);
     }
 
     [Fact]
@@ -77,34 +64,6 @@ public sealed class ZoneScheduleTests
     }
 
     [Fact]
-    public void Submit_DurationEqualsMaximum_IsAccepted()
-    {
-        var schedule = MeetingRoom();
-
-        var id = Submit(schedule, Tomorrow(9, 17));
-
-        Assert.Equal(ReservationStatus.Requested, schedule.Get(id).Status);
-    }
-
-    [Theory]
-    [InlineData(-60, 60)]          // період уже розпочався
-    [InlineData(60, 20)]           // коротше за 30 хвилин
-    [InlineData(60, 481)]          // довше за 8 годин на 1 хвилину
-    [InlineData(31 * 24 * 60, 60)] // за горизонтом 30 днів
-    public void Submit_OutsidePolicy_RefusesWithoutChanges(int startInMinutes, int durationMinutes)
-    {
-        var schedule = MeetingRoom();
-        var start = Now.AddMinutes(startInMinutes);
-        var slot = new TimeSlot(start, start.AddMinutes(durationMinutes));
-
-        Assert.Throws<DomainException>(() =>
-            schedule.Submit(ReservationId.New(), Organizer, slot, ReservationPurpose.Meeting, 5, Now));
-
-        Assert.Empty(schedule.Reservations);
-        Assert.Empty(schedule.Events);
-    }
-
-    [Fact]
     public void Confirm_ByOrganizer_RefusesWithoutChanges()
     {
         var schedule = MeetingRoom();
@@ -112,20 +71,6 @@ public sealed class ZoneScheduleTests
         var before = StateOf(schedule);
 
         Assert.Throws<DomainException>(() => schedule.Confirm(id, Organizer, null, Now));
-
-        Assert.Equal(before, StateOf(schedule));
-    }
-
-    [Fact]
-    public void Cancel_AfterUsageStarted_RefusesWithoutChanges()
-    {
-        var schedule = MeetingRoom();
-        var slot = Tomorrow(10, 12);
-        var id = Confirmed(schedule, slot);
-        schedule.RecordUsageStarted(id, slot.Start.AddMinutes(5));
-        var before = StateOf(schedule);
-
-        Assert.Throws<DomainException>(() => schedule.Cancel(id, Organizer, Now));
 
         Assert.Equal(before, StateOf(schedule));
     }

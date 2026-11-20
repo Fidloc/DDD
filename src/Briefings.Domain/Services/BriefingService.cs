@@ -2,11 +2,7 @@ using Briefings.Domain;
 
 namespace Briefings.Application;
 
-/// <summary>
-/// Прикладна служба контексту «Облік інструктажів».
-/// Координує отримання виконавця й часу, завантаження картки інструктажів,
-/// виклик предметної поведінки та спільну фіксацію змін через Unit of Work.
-/// </summary>
+
 public sealed class BriefingService
 {
     private readonly IBriefingRecordRepository repository;

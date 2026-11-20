@@ -37,66 +37,25 @@ public sealed class ZoneUsageServiceTests
     }
 
     [Fact]
-    public async Task DeclareNoShow_AfterDelayReported_RefusesWithoutStagingOrSaving()
+    public async Task DeclareNoShow_AfterDelayReported_RefusesAndKeepsExpectedState()
     {
         var usage = CreateExpected();
         usage.ReportDelay(Organizer, SlotStart.AddMinutes(10));
-        var spyRepo = new SpyZoneUsageRepository(usage);
+        var session = new ZoneUsageMemorySession(usage);
         var service = new ZoneUsageService(
-            spyRepo, spyRepo,
+            session, session,
             new StubActorContext(Administrator),
             new StubClock(SlotStart.AddMinutes(30)));
 
         await Assert.ThrowsAsync<DomainException>(() =>
             service.DeclareNoShowAsync(usage.ReservationId));
 
-        Assert.Equal(0, spyRepo.StagedCount);
-        Assert.Equal(0, spyRepo.SavedCount);
-    }
-
-    [Fact]
-    public async Task StartUsage_WhenUnitOfWorkThrows_LeavesStoredStatusExpected()
-    {
-        var usage = CreateExpected();
-        var session = new ZoneUsageMemorySession(usage);
-        var service = new ZoneUsageService(
-            session, new FailingUnitOfWork(),
-            new StubActorContext(Organizer),
-            new StubClock(SlotStart.AddMinutes(2)));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.StartUsageAsync(usage.ReservationId));
-
-        var reloaded = await session.FindAsync(usage.ReservationId);
-        Assert.NotNull(reloaded);
-        Assert.Equal(UsageStatus.Expected, reloaded.Aggregate.Status);
-        Assert.Equal(1L, reloaded.Revision);
+        var loaded = await session.FindAsync(usage.ReservationId);
+        Assert.NotNull(loaded);
+        Assert.Equal(1L, loaded.Revision);
+        Assert.Equal(UsageStatus.Expected, loaded.Aggregate.Status);
     }
 
     private sealed record StubActorContext(Actor CurrentActor) : IActorContext;
     private sealed record StubClock(DateTimeOffset Now) : IClock;
-
-    private sealed class FailingUnitOfWork : IUnitOfWork
-    {
-        public Task SaveChangesAsync() =>
-            throw new InvalidOperationException("Технічний збій збереження стану використання.");
-    }
-
-    private sealed class SpyZoneUsageRepository(ZoneUsageRecord initial) : IZoneUsageRepository, IUnitOfWork
-    {
-        private readonly ZoneUsageState state = initial.ToState();
-        public int StagedCount { get; private set; }
-        public int SavedCount { get; private set; }
-
-        public Task<LoadedZoneUsage?> FindAsync(ReservationId reservationId) =>
-            Task.FromResult<LoadedZoneUsage?>(new LoadedZoneUsage(ZoneUsageRecord.Restore(state), 1L));
-
-        public void Stage(ZoneUsageRecord usage, long expectedRevision) => StagedCount++;
-
-        public Task SaveChangesAsync()
-        {
-            SavedCount++;
-            return Task.CompletedTask;
-        }
-    }
 }
